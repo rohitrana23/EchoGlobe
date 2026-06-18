@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Navbar from './components/Navbar';
 import WorldMap from './components/WorldMap';
+import SearchSidebar from './components/SearchSidebar';
 import AudioPlayer from './components/AudioPlayer';
 
 type Station = {
@@ -36,21 +37,34 @@ function App() {
   }, []);
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-neo-bg">
-      <Navbar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-      
-      <div className="flex flex-1 overflow-hidden">
-        
-        <main className="flex-1 relative border-l-4 border-neo-dark">
-          <WorldMap 
-            stations={stations} 
-            onSelectStation={(station) => setSelectedStation(station)} 
-          />
-        </main>
+    <div className="relative h-screen w-screen overflow-hidden">
+
+      <div className="absolute inset-0 z-0">
+        <WorldMap
+          stations={stations}
+          onSelectStation={(station) => setSelectedStation(station)}
+        />
       </div>
 
+      <div className="absolute top-0 left-0 right-0 z-50 pointer-events-none">
+        <Navbar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      </div>
+
+      {/* {sidebarOpen && (
+        <div className="absolute left-4 top-32 bottom-4 z-40">
+          <SearchSidebar
+            stations={stations}
+            onSearch={fetchStations}
+            onSelectStation={(station) => setSelectedStation(station)}
+            onClose={() => setSidebarOpen(false)}
+          />
+        </div>
+      )} */}
+
       {selectedStation && (
-        <AudioPlayer station={selectedStation} />
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-xl px-4">
+          <AudioPlayer station={selectedStation} />
+        </div>
       )}
     </div>
   );
