@@ -50,7 +50,7 @@ function App() {
         <Navbar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
       </div>
 
-      {/* {sidebarOpen && (
+      {sidebarOpen && (
         <div className="absolute left-4 top-32 bottom-4 z-40">
           <SearchSidebar
             stations={stations}
@@ -59,7 +59,7 @@ function App() {
             onClose={() => setSidebarOpen(false)}
           />
         </div>
-      )} */}
+      )}
 
       {selectedStation && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-xl px-4">

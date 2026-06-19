@@ -11,14 +11,13 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar }) => {
   <div className="mx-4 mt-3 pointer-events-auto">
         <div className="
           flex items-center justify-between
-          px-4 py-2.5
+          px-4 py-1
           bg-[#FFD84D]
           border-[2.5px] border-black
           rounded-xl
           shadow-[5px_5px_0px_0px_#000]
         ">
 
-          {/* Left — brand */}
           <div className="flex items-center gap-3">
             <button
               onClick={toggleSidebar}
@@ -39,7 +38,6 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar }) => {
               <Menu className="w-4 h-4" strokeWidth={2.5} />
             </button>
 
-            {/* Divider */}
             <div className="w-[2px] h-7 bg-black/20 rounded-full" />
 
             <div className="flex items-center gap-2.5">
@@ -53,16 +51,14 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar }) => {
               </div>
 
               <div className="leading-none">
-                <h1 className="text-lg font-extrabold color-black">
+                <h1 className="text-3xl font-extrabold color-black">
                   EchoGlobe
                 </h1>
               </div>
             </div>
           </div>
 
-          {/* Right — actions */}
           <div className="flex items-center gap-2">
-            {/* Station count pill — subtle context */}
             <div className="
               hidden sm:flex items-center gap-1.5
               px-3 py-1.5
@@ -72,7 +68,7 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar }) => {
               font-bold text-xs tracking-tight
             ">
               <Globe className="w-3 h-3" strokeWidth={2.5} />
-              <span>30k+ stations</span>
+              <span>1k+ stations</span>
             </div>
 
             <button className="

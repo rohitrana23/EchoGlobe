@@ -62,8 +62,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ stations, onSelectStation }) => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           className="map-tiles"
         />
-        
-        {/* We can use react-leaflet-cluster for clustering markers */}
+
+        {/*react-leaflet-clusters for clustring markers */}
         <MarkerClusterGroup
           chunkedLoading
           maxClusterRadius={50}
@@ -94,8 +94,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ stations, onSelectStation }) => {
           ))}
         </MarkerClusterGroup>
       </MapContainer>
-      
-      {/* Small inject of custom css for map popup to look brutalist */}
+
       <style>{`
         .leaflet-popup-content-wrapper {
           border: 3px solid #1e1e1e !important;

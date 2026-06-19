@@ -29,12 +29,12 @@ const SearchSidebar: React.FC<SearchSidebarProps> = ({
     <aside
   className={`
     w-72 flex flex-col
-    h-full max-h-full        {/* was just h-full */}
+    h-full max-h-full  
     bg-white
-    border-[2.5px] border-black      {/* change border-r to full border */}
-    rounded-xl                        {/* add this — floats nicer */}
-    shadow-[5px_5px_0px_0px_#000]    {/* match navbar shadow style */}
-    overflow-hidden                   {/* clip rounded corners */}
+    border-[2.5px] border-black     
+    rounded-xl                       
+    shadow-[5px_5px_0px_0px_#000]    
+    overflow-hidden           
     z-40 relative
     transition-transform duration-200
     ${isOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -149,7 +149,6 @@ const SearchSidebar: React.FC<SearchSidebarProps> = ({
                     group
                   "
                 >
-                  {/* Favicon / fallback */}
                   <div className="
                     w-9 h-9 shrink-0
                     border-[2px] border-black
