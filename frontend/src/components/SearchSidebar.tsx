@@ -19,35 +19,54 @@ const SearchSidebar: React.FC<SearchSidebarProps> = ({
   onClose,
 }) => {
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+
+  const ITEMS_PER_PAGE = 10;
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(stations.length / ITEMS_PER_PAGE)
+  );
+
+  const visibleStations = stations.slice(
+    (page - 1) * ITEMS_PER_PAGE,
+    page * ITEMS_PER_PAGE
+  );
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    setPage(1);
     onSearch(query);
   };
 
   return (
     <aside
-  className={`
-    w-72 flex flex-col
-    h-full max-h-full  
-    bg-white
-    border-[2.5px] border-black     
-    rounded-xl                       
-    shadow-[5px_5px_0px_0px_#000]    
-    overflow-hidden           
-    z-40 relative
-    transition-transform duration-200
-    ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-  `}
->
+      className={`
+        w-72 flex flex-col
+        h-full max-h-full
+        bg-white
+        border-[2.5px] border-black
+        rounded-xl
+        shadow-[5px_5px_0px_0px_#000]
+        overflow-hidden
+        z-40 relative
+        transition-transform duration-200
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}
+    >
       {/* Header */}
-      <div className="
-        flex items-center justify-between
-        px-4 py-3
-        bg-[#FFD84D]
-        border-b-[2.5px] border-black
-      ">
-        <span className="font-black text-sm uppercase tracking-widest">Stations</span>
+      <div
+        className="
+          flex items-center justify-between
+          px-4 py-3
+          bg-[#FFD84D]
+          border-b-[2.5px] border-black
+        "
+      >
+        <span className="font-black text-sm uppercase tracking-widest">
+          Stations
+        </span>
+
         {onClose && (
           <button
             onClick={onClose}
@@ -90,6 +109,7 @@ const SearchSidebar: React.FC<SearchSidebarProps> = ({
               transition-shadow duration-100
             "
           />
+
           <button
             type="submit"
             aria-label="Search"
@@ -123,13 +143,20 @@ const SearchSidebar: React.FC<SearchSidebarProps> = ({
       <div className="flex-1 overflow-y-auto">
         {stations.length === 0 ? (
           <div className="m-3 p-4 text-center border-[2px] border-dashed border-black/30 rounded-xl">
-            <Radio className="w-8 h-8 mx-auto mb-2 opacity-25" strokeWidth={1.5} />
-            <p className="text-sm font-bold text-black/40">No stations found</p>
-            <p className="text-xs text-black/30 mt-0.5">Try a different search</p>
+            <Radio
+              className="w-8 h-8 mx-auto mb-2 opacity-25"
+              strokeWidth={1.5}
+            />
+            <p className="text-sm font-bold text-black/40">
+              No stations found
+            </p>
+            <p className="text-xs text-black/30 mt-0.5">
+              Try a different search
+            </p>
           </div>
         ) : (
           <ul className="p-3 space-y-2">
-            {stations.map((station) => (
+            {visibleStations.map((station) => (
               <li key={station.id}>
                 <button
                   onClick={() => onSelectStation(station)}
@@ -149,43 +176,50 @@ const SearchSidebar: React.FC<SearchSidebarProps> = ({
                     group
                   "
                 >
-                  <div className="
-                    w-9 h-9 shrink-0
-                    border-[2px] border-black
-                    rounded-lg overflow-hidden
-                    bg-[#FFD84D]
-                    flex items-center justify-center
-                  ">
+                  <div
+                    className="
+                      w-9 h-9 shrink-0
+                      border-[2px] border-black
+                      rounded-lg overflow-hidden
+                      bg-[#FFD84D]
+                      flex items-center justify-center
+                    "
+                  >
                     {station.favicon ? (
-                      <img
-                        src={station.favicon}
-                        alt={station.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          e.currentTarget.nextElementSibling?.removeAttribute('hidden');
-                        }}
-                      />
-                    ) : null}
-                    <Globe className="w-4 h-4" strokeWidth={2} />
+  <img
+    src={station.favicon}
+    alt={station.name}
+    className="w-full h-full object-cover"
+  />
+) : (
+  <Globe className="w-4 h-4" />
+)}
                   </div>
 
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm truncate leading-tight">
                       {station.name}
                     </p>
+
                     <div className="flex items-center gap-1 mt-0.5">
-                      <MapPin className="w-3 h-3 shrink-0 text-black/40" strokeWidth={2} />
+                      <MapPin
+                        className="w-3 h-3 shrink-0 text-black/40"
+                        strokeWidth={2}
+                      />
                       <span className="text-xs text-black/50 font-medium truncate">
                         {station.country || 'Unknown'}
                       </span>
                     </div>
                   </div>
 
-                  {/* Play hint */}
                   <Radio
-                    className="w-3.5 h-3.5 shrink-0 text-black/20 group-hover:text-black/60 transition-colors"
+                    className="
+                      w-3.5 h-3.5
+                      shrink-0
+                      text-black/20
+                      group-hover:text-black/60
+                      transition-colors
+                    "
                     strokeWidth={2}
                   />
                 </button>
@@ -194,6 +228,59 @@ const SearchSidebar: React.FC<SearchSidebarProps> = ({
           </ul>
         )}
       </div>
+
+      {/* Pagination */}
+      {stations.length > 0 && (
+        <div
+          className="
+            flex items-center justify-between
+            px-3 py-2
+            border-t-[2px]
+            border-black
+            bg-white
+          "
+        >
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="
+              px-3 py-1
+              border-[2px]
+              border-black
+              rounded-md
+              bg-[#FFD84D]
+              font-bold
+              disabled:opacity-40
+              disabled:cursor-not-allowed
+            "
+          >
+            Prev
+          </button>
+
+          <span className="text-sm font-bold">
+            {page} / {totalPages}
+          </span>
+
+          <button
+            onClick={() =>
+              setPage((p) => Math.min(totalPages, p + 1))
+            }
+            disabled={page === totalPages}
+            className="
+              px-3 py-1
+              border-[2px]
+              border-black
+              rounded-md
+              bg-[#FFD84D]
+              font-bold
+              disabled:opacity-40
+              disabled:cursor-not-allowed
+            "
+          >
+            Next
+          </button>
+        </div>
+      )}
     </aside>
   );
 };

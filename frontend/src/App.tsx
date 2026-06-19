@@ -25,7 +25,7 @@ function App() {
 
   const fetchStations = async (query = '') => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/stations/search?q=${query || 'news'}&limit=1000`);
+      const res = await axios.get(`http://localhost:5000/api/stations/search?q=${query || 'music'}&limit=5000`);
       setStations(res.data);
     } catch (error) {
       console.error('Error fetching stations', error);
@@ -56,15 +56,13 @@ function App() {
             stations={stations}
             onSearch={fetchStations}
             onSelectStation={(station) => setSelectedStation(station)}
-            onClose={() => setSidebarOpen(false)}
+            onClose={()=>setSidebarOpen(false)}
           />
         </div>
       )}
 
       {selectedStation && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-xl px-4">
-          <AudioPlayer station={selectedStation} />
-        </div>
+        <AudioPlayer station={selectedStation} />
       )}
     </div>
   );
