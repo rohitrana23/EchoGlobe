@@ -32,28 +32,48 @@ L.Icon.Default.mergeOptions({
 });
 
 // Single reusable icon
-const stationIcon = L.divIcon({
-  className: 'custom-icon',
-  html: `
-    <div style="
-      width:36px;
-      height:36px;
-      background:#5fff59;
-      border:2px solid #1e1e1e;
-      box-shadow:3px 3px 0px #1e1e1e;
-      border-radius:50%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-weight:bold;
-      overflow:hidden;
-    ">
-      R
-    </div>
-  `,
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-});
+const iconCache = new Map<string, L.DivIcon>();
+
+const getStationIcon = (favicon?: string) => {
+  const imageUrl =
+    favicon && favicon.trim().length > 0
+      ? favicon
+      : 'https://placehold.co/36x36?text=R';
+
+  if (!iconCache.has(imageUrl)) {
+    iconCache.set(
+      imageUrl,
+      L.divIcon({
+        className: '',
+        html: `
+          <div style="
+            width:36px;
+            height:36px;
+            border:2px solid #1e1e1e;
+            box-shadow:3px 3px 0px #1e1e1e;
+            border-radius:50%;
+            overflow:hidden;
+            background:white;
+          ">
+            <img
+              src="${imageUrl}"
+              style="
+                width:100%;
+                height:100%;
+                object-fit:cover;
+              "
+              onerror="this.src='https://placehold.co/36x36?text=R'"
+            />
+          </div>
+        `,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+      })
+    );
+  }
+
+  return iconCache.get(imageUrl)!;
+};
 
 interface WorldMapProps {
   stations: Station[];
@@ -103,10 +123,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
             <Marker
               key={station.id}
               position={[station.geoLat, station.geoLong]}
-              icon={stationIcon}
-              eventHandlers={{
-                click: () => onSelectStation(station),
-              }}
+              icon={getStationIcon(station.favicon)}
             >
               <Popup>
                 <div className="p-2">
