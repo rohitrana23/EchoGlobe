@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import "./worldMap.css";
 import {
   MapContainer,
   TileLayer,
@@ -30,56 +31,50 @@ L.Icon.Default.mergeOptions({
   shadowUrl:
     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
-// Single reusable icon
+// Icon cache keyed by "url|selected" so selected state is always reflected
 const iconCache = new Map<string, L.DivIcon>();
-const getStationIcon = (favicon?: string) => {
+const getStationIcon = (
+  favicon?: string,
+  selected = false
+) => {
   const imageUrl =
     favicon && favicon.trim().length > 0
       ? favicon
       : 'https://placehold.co/36x36?text=R';
 
-  if (!iconCache.has(imageUrl)) {
+  const cacheKey = `${imageUrl}|${selected}`;
+
+  if (!iconCache.has(cacheKey)) {
     iconCache.set(
-      imageUrl,
+      cacheKey,
       L.divIcon({
         className: '',
         html: `
-          <div style="
-            width:36px;
-            height:36px;
-            border:2px solid #1e1e1e;
-            box-shadow:3px 3px 0px #1e1e1e;
-            border-radius:50%;
-            overflow:hidden;
-            background:white;
-          ">
-            <img
-              src="${imageUrl}"
-              style="
-                width:100%;
-                height:100%;
-                object-fit:cover;
-              "
-              onerror="this.src='https://placehold.co/36x36?text=R'"
-            />
-          </div>
-        `,
+<div class="${selected ? 'marker-selected' : 'marker'}">
+  <img
+    src="${imageUrl}"
+    onerror="this.src='https://placehold.co/36x36?text=R'"
+  />
+</div>
+`,
         iconSize: [36, 36],
         iconAnchor: [18, 18],
       })
     );
   }
 
-  return iconCache.get(imageUrl)!;
+  return iconCache.get(cacheKey)!;
 };
 
 interface WorldMapProps {
   stations: Station[];
+  selectedStationId?: string;
   onSelectStation: (station: Station) => void;
 }
 
 const WorldMap: React.FC<WorldMapProps> = ({
   stations,
+  selectedStationId,
   onSelectStation,
 }) => {
   const validStations = useMemo(() => {
@@ -120,7 +115,10 @@ const WorldMap: React.FC<WorldMapProps> = ({
             <Marker
               key={station.id}
               position={[station.geoLat, station.geoLong]}
-              icon={getStationIcon(station.favicon)}
+              icon={getStationIcon(
+    station.favicon,
+    station.id === selectedStationId
+)}
             >
               <Popup>
                 <div className="p-2">

@@ -41,9 +41,10 @@ function App() {
 
       <div className="absolute inset-0 z-0">
         <WorldMap
-          stations={stations}
-          onSelectStation={(station) => setSelectedStation(station)}
-        />
+    stations={stations}
+    selectedStationId={selectedStation?.id}
+    onSelectStation={setSelectedStation}
+/>
       </div>
 
       <div className="absolute top-0 left-0 right-0 z-50 pointer-events-none">
