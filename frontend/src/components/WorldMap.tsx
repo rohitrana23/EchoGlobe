@@ -30,10 +30,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl:
     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
-
 // Single reusable icon
 const iconCache = new Map<string, L.DivIcon>();
-
 const getStationIcon = (favicon?: string) => {
   const imageUrl =
     favicon && favicon.trim().length > 0
@@ -98,18 +96,17 @@ const WorldMap: React.FC<WorldMapProps> = ({
     <div className="h-full w-full bg-neo-bg">
       <MapContainer
         center={[20, 0]}
-        zoom={3}
-        scrollWheelZoom
-        style={{
-          height: '100%',
-          width: '100%',
-          zIndex: 0,
-        }}
+        zoom={2}
+        style={{ height: "100%", width: "100%" }}
+        maxBounds={[
+        [-90, -180],
+        [90, 180],
+        ]}
+        maxBoundsViscosity={1.0}
       >
         <TileLayer
-          attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          className="map-tiles"
+          noWrap={true}
         />
 
         <MarkerClusterGroup
