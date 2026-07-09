@@ -1,22 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Navbar from './components/Navbar';
-import WorldMap from './components/WorldMap';
+import WorldMap, { type Station } from './components/WorldMap';
 import SearchSidebar from './components/SearchSidebar';
 import AudioPlayer from './components/AudioPlayer';
-
-type Station = {
-  id: string;
-  stationuuid: string;
-  name: string;
-  urlResolved: string;
-  favicon: string;
-  tags: string;
-  country: string;
-  language: string;
-  geoLat: number;
-  geoLong: number;
-};
 
 function App() {
   const [stations, setStations] = useState<Station[]>([]);
@@ -36,19 +23,33 @@ function App() {
     fetchStations();
   }, []);
 
+  const handleRandomStation = () => {
+    if (stations.length === 0) return;
+
+    const playableStations = stations.filter((station) => station.urlResolved);
+    const pool = playableStations.length > 0 ? playableStations : stations;
+
+    const randomIndex = crypto.getRandomValues(new Uint32Array(1))[0] % pool.length;
+    const randomStation = pool[randomIndex];
+
+    setSelectedStation(randomStation);
+  };
+
   return (
     <div className="relative h-screen w-screen overflow-hidden">
-
       <div className="absolute inset-0 z-0">
         <WorldMap
     stations={stations}
     selectedStationId={selectedStation?.id}
-    onSelectStation={setSelectedStation}
+    onSelectStation={(station) => setSelectedStation(station)}
 />
       </div>
 
       <div className="absolute top-0 left-0 right-0 z-50 pointer-events-none">
-        <Navbar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+        <Navbar
+          toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          onRandomStation={handleRandomStation}
+        />
       </div>
 
       {sidebarOpen && (

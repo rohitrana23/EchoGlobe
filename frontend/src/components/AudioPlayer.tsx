@@ -42,7 +42,7 @@ const AudioPlayer: React.FC<AudioPlayerProps>=({station}) => {
             setIsPlaying(true);
             setIsLoading(false);
           })
-          .catch(err => {
+          .catch(() => {
             setError("Failed to play");
             setIsLoading(false);
           });

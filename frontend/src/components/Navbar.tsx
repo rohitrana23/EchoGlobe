@@ -3,9 +3,10 @@ import { Menu, Radio, Shuffle, Globe } from 'lucide-react';
 
 interface NavbarProps {
   toggleSidebar: () => void;
+  onRandomStation: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ toggleSidebar }) => {
+const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, onRandomStation }) => {
   return (
     <nav className="absolute top-0 left-0 right-0 z-50 pointer-events-none">
   <div className="mx-4 mt-3 pointer-events-auto">
@@ -71,7 +72,9 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar }) => {
               <span>1k+ stations</span>
             </div>
 
-            <button className="
+            <button
+              onClick={onRandomStation}
+              className="
               hidden md:flex items-center gap-2
               px-3.5 py-2
               bg-white

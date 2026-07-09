@@ -10,12 +10,15 @@ import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-interface Station {
+export interface Station {
   id: string;
+  stationuuid?: string;
   name: string;
+  urlResolved?: string;
+  favicon?: string;
+  tags?: string;
   country?: string;
   language?: string;
-  favicon?: string;
   geoLat: number;
   geoLong: number;
 }
@@ -31,7 +34,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl:
     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
-// Icon cache keyed by "url|selected" so selected state is always reflected
 const iconCache = new Map<string, L.DivIcon>();
 const getStationIcon = (
   favicon?: string,
@@ -92,7 +94,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
       <MapContainer
         center={[20, 0]}
         zoom={2}
-        style={{ height: "100%", width: "100%" }}
+        style={{ height: "100%", width:"100%" }}
         maxBounds={[
         [-90, -180],
         [90, 180],
@@ -116,9 +118,9 @@ const WorldMap: React.FC<WorldMapProps> = ({
               key={station.id}
               position={[station.geoLat, station.geoLong]}
               icon={getStationIcon(
-    station.favicon,
-    station.id === selectedStationId
-)}
+              station.favicon,
+              station.id === selectedStationId
+            )}
             >
               <Popup>
                 <div className="p-2">
