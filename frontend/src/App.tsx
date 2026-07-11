@@ -23,15 +23,17 @@ function App() {
     fetchStations();
   }, []);
 
-  const handleRandomStation = () => {
-    if (stations.length === 0) return;
-
-    const playableStations = stations.filter((station) => station.urlResolved);
-    const pool = playableStations.length > 0 ? playableStations : stations;
-
-    const randomIndex = crypto.getRandomValues(new Uint32Array(1))[0] % pool.length;
-    const randomStation = pool[randomIndex];
-
+  const handleRandomStation=()=>{
+    if(stations.length===0) return;
+    const playableStations=stations.filter((station) => station.urlResolved);
+    let pool: Station[]=[];
+    if(playableStations.length>0){
+      pool=playableStations;
+    }else{
+      pool=stations;
+    }
+    const randomIndex=crypto.getRandomValues(new Uint32Array(1))[0] % pool.length;
+    const randomStation=pool[randomIndex];
     setSelectedStation(randomStation);
   };
 
@@ -69,5 +71,4 @@ function App() {
     </div>
   );
 }
-
 export default App;

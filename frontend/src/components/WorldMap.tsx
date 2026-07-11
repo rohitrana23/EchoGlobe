@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import "./worldMap.css";
 import {
   MapContainer,
   TileLayer,
   Marker,
   Popup,
+  useMap,
 } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
@@ -79,6 +80,25 @@ const WorldMap: React.FC<WorldMapProps> = ({
   selectedStationId,
   onSelectStation,
 }) => {
+  // MapController will handle flying to selected station
+  const MapController: React.FC = () => {
+    const map = useMap();
+
+    useEffect(() => {
+      if (!selectedStationId) return;
+
+      const station = stations.find((s) => s.id === selectedStationId);
+      if (!station || station.geoLat == null || station.geoLong == null) return;
+
+      try {
+        map.flyTo([station.geoLat, station.geoLong], 8, { duration: 1.2 });
+      } catch (err) {
+        map.setView([station.geoLat, station.geoLong], 8);
+      }
+    }, [selectedStationId, map]);
+
+    return null;
+  };
   const validStations = useMemo(() => {
     return stations.filter(
       (station) =>
@@ -101,6 +121,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
         ]}
         maxBoundsViscosity={1.0}
       >
+        {selectedStationId && <MapController />}
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           noWrap={true}
