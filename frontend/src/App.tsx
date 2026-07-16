@@ -12,7 +12,8 @@ function App() {
 
   const fetchStations = async (query = '') => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/stations/search?q=${query || 'music'}&limit=5000`);
+      const base = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const res = await axios.get(`${base}/api/stations/search?q=${query || 'music'}&limit=5000`);
       setStations(res.data);
     } catch (error) {
       console.error('Error fetching stations', error);
