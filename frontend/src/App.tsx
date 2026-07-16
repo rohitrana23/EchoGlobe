@@ -13,15 +13,34 @@ function App() {
   const fetchStations = async (query = '') => {
     try {
       const base = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const res = await axios.get(`${base}/api/stations/search?q=${query || 'music'}&limit=5000`);
+      const url = `${base}/api/stations/search?q=${query || 'music'}&limit=5000`;
+      console.log('Fetching stations from:', url);
+      const res = await axios.get(url);
+      console.log('Stations fetch status:', res.status);
       setStations(res.data);
     } catch (error) {
-      console.error('Error fetching stations', error);
+      // Provide detailed debug info for failed requests
+      // @ts-expect-error axios error typing
+      const status = error?.response?.status;
+      // @ts-expect-error axios error typing
+      const reqUrl = error?.config?.url;
+      console.error('Error fetching stations', { status, reqUrl, error });
     }
   };
 
   useEffect(() => {
-    fetchStations();
+    // Log which API base we're using and verify backend health
+    const base = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    console.log('Using API base:', base);
+    (async () => {
+      try {
+        const healthRes = await fetch(`${base}/health`);
+        console.log('Backend /health status:', healthRes.status);
+      } catch (err) {
+        console.error('Backend health check failed', err);
+      }
+      await fetchStations();
+    })();
   }, []);
 
   const handleRandomStation=()=>{
