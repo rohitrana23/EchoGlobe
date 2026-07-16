@@ -12,8 +12,11 @@ function App() {
 
   const fetchStations = async (query = '') => {
     try {
-      const base = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const url = `${base}/api/stations/search?q=${query || 'music'}&limit=5000`;
+      const rawBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const base = /^(?:[a-zA-Z][a-zA-Z0-9+.-]*:\/\/)/.test(rawBase)
+        ? rawBase
+        : `https://${rawBase.replace(/^\/+/, '')}`;
+      const url = `${base.replace(/\/$/, '')}/api/stations/search?q=${query || 'music'}&limit=5000`;
       console.log('Fetching stations from:', url);
       const res = await axios.get(url);
       console.log('Stations fetch status:', res.status);
@@ -30,11 +33,14 @@ function App() {
 
   useEffect(() => {
     // Log which API base we're using and verify backend health
-    const base = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const rawBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const base = /^(?:[a-zA-Z][a-zA-Z0-9+.-]*:\/\/)/.test(rawBase)
+      ? rawBase
+      : `https://${rawBase.replace(/^\/+/, '')}`;
     console.log('Using API base:', base);
     (async () => {
       try {
-        const healthRes = await fetch(`${base}/health`);
+        const healthRes = await fetch(`${base.replace(/\/$/, '')}/health`);
         console.log('Backend /health status:', healthRes.status);
       } catch (err) {
         console.error('Backend health check failed', err);
