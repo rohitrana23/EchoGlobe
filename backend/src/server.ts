@@ -9,8 +9,21 @@ const prisma = new PrismaClient();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust proxy when deployed behind Railway/Vercel proxies
+app.set("trust proxy", 1);
+
+// CORS: allow origin from env or default to frontend hosts (allow all if not provided)
+const CORS_ORIGIN = process.env.CORS_ORIGIN || process.env.FRONTEND_ORIGIN || "*";
+const corsOptions: cors.CorsOptions = {
+  origin: CORS_ORIGIN === "*" ? true : CORS_ORIGIN,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true,
+  optionsSuccessStatus: 204,
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json());
 
 // Health check route
@@ -44,6 +57,22 @@ app.get("/api/stations/search", async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+// Graceful shutdown
+const shutdown = async () => {
+  console.log("Shutting down server...");
+  server.close(async () => {
+    try {
+      await prisma.$disconnect();
+    } catch (e) {
+      // ignore
+    }
+    process.exit(0);
+  });
+};
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
