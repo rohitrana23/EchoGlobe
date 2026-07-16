@@ -1,15 +1,7 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from "react";
+import * as Cesium from "cesium";
+import "cesium/Build/Cesium/Widgets/widgets.css";
 import "./worldMap.css";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  useMap,
-} from 'react-leaflet';
-import MarkerClusterGroup from 'react-leaflet-cluster';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
 
 export interface Station {
   id: string;
@@ -24,165 +16,255 @@ export interface Station {
   geoLong: number;
 }
 
-// Fix default Leaflet marker icons
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-const iconCache = new Map<string, L.DivIcon>();
-const getStationIcon = (
-  favicon?: string,
-  selected = false
-) => {
-  const imageUrl =
-    favicon && favicon.trim().length > 0
-      ? favicon
-      : 'https://placehold.co/36x36?text=R';
-
-  const cacheKey = `${imageUrl}|${selected}`;
-
-  if (!iconCache.has(cacheKey)) {
-    iconCache.set(
-      cacheKey,
-      L.divIcon({
-        className: '',
-        html: `
-<div class="${selected ? 'marker-selected' : 'marker'}">
-  <img
-    src="${imageUrl}"
-    onerror="this.src='https://placehold.co/36x36?text=R'"
-  />
-</div>
-`,
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
-      })
-    );
-  }
-
-  return iconCache.get(cacheKey)!;
-};
-
 interface WorldMapProps {
   stations: Station[];
   selectedStationId?: string;
   onSelectStation: (station: Station) => void;
 }
 
+function useLatest<T>(value: T) {
+  const ref = useRef(value);
+  ref.current = value;
+  return ref;
+}
+
+const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmOThiMDY0ZS1lODVhLTQ0YzMtYThmNC0xMTJhZGU3YmM2MDAiLCJpZCI6NDU3MDI2LCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3ODQxODM4NzV9.lD_gnBuo91I0wbXxm_DhJXTWpe4ml3LBDp_BHfSkOdI";
+
 const WorldMap: React.FC<WorldMapProps> = ({
   stations,
   selectedStationId,
   onSelectStation,
 }) => {
-  // MapController will handle flying to selected station
-  const MapController: React.FC = () => {
-    const map = useMap();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<Cesium.Viewer | null>(null);
+  const entitiesRef = useRef<Cesium.Entity[]>([]);
+  const rotatingRef = useRef(true);
+  const handlerRef = useRef<Cesium.ScreenSpaceEventHandler | null>(null);
+  const onSelectRef = useLatest(onSelectStation);
 
-    useEffect(() => {
-      if (!selectedStationId) return;
+  const validStations = useMemo(
+    () =>
+      stations.filter(
+        (s) =>
+          Number.isFinite(s.geoLat) &&
+          Number.isFinite(s.geoLong)
+      ),
+    [stations]
+  );
 
-      const station = stations.find((s) => s.id === selectedStationId);
-      if (!station || station.geoLat == null || station.geoLong == null) return;
-
-      try {
-        map.flyTo([station.geoLat, station.geoLong], 8, { duration: 1.2 });
-      } catch (err) {
-        map.setView([station.geoLat, station.geoLong], 8);
-      }
-    }, [selectedStationId, map]);
-
-    return null;
+  const createPurplePin = () => {
+    const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <defs>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.25" />
+    </filter>
+  </defs>
+  <circle cx="48" cy="40" r="28" fill="#8b5cf6" filter="url(#shadow)" />
+  <path d="M48 68 C48 68 30 54 30 40 A18 18 0 1 1 66 40 C66 54 48 68 48 68 Z" fill="#8b5cf6" />
+  <circle cx="48" cy="40" r="20" fill="rgba(255,255,255,0.16)" />
+</svg>
+    `;
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   };
-  const validStations = useMemo(() => {
-    return stations.filter(
-      (station) =>
-        station.geoLat != null &&
-        station.geoLong != null &&
-        !isNaN(station.geoLat) &&
-        !isNaN(station.geoLong)
+
+  const getMarkerImage = () => createPurplePin();
+
+  const rebuildEntities = () => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    entitiesRef.current.forEach((entity) => viewer.entities.remove(entity));
+    entitiesRef.current = [];
+
+    validStations.forEach((station) => {
+      const selected = station.id === selectedStationId;
+
+      const entity = viewer.entities.add({
+        id: station.id,
+        name: station.name,
+        position: Cesium.Cartesian3.fromDegrees(
+          station.geoLong,
+          station.geoLat
+        ),
+        billboard: {
+          image: getMarkerImage(),
+          width: selected ? 54 : 42,
+          height: selected ? 54 : 42,
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          scaleByDistance: new Cesium.NearFarScalar(
+            500000,
+            1.3,
+            25000000,
+            0.45
+          ),
+        },
+        label: {
+          text: station.name,
+          show: selected,
+          font: "15px sans-serif",
+          fillColor: Cesium.Color.WHITE,
+          outlineColor: Cesium.Color.BLACK,
+          outlineWidth: 3,
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+          pixelOffset: new Cesium.Cartesian2(0, -45),
+        },
+      });
+
+      entitiesRef.current.push(entity);
+    });
+  };
+
+  useEffect(() => {
+    if (!containerRef.current || viewerRef.current) return;
+
+    let cancelled = false;
+
+    (async () => {
+      Cesium.Ion.defaultAccessToken = TOKEN;
+
+      const terrain = await Cesium.createWorldTerrainAsync();
+
+      const viewer = new Cesium.Viewer(containerRef.current!, {
+        terrainProvider: terrain,
+        animation: false,
+        timeline: false,
+        baseLayerPicker: false,
+        geocoder: false,
+        homeButton: false,
+        sceneModePicker: false,
+        navigationHelpButton: false,
+        fullscreenButton: false,
+        infoBox: false,
+        selectionIndicator: false,
+      });
+      viewer.resolutionScale = 0.75;
+      if (cancelled) {
+        viewer.destroy();
+        return;
+      }
+
+      viewerRef.current = viewer;
+
+      viewer.imageryLayers.removeAll();
+
+      const provider = await Cesium.IonImageryProvider.fromAssetId(3830183);
+      viewer.imageryLayers.addImageryProvider(provider);
+
+      viewer.scene.globe.showGroundAtmosphere = true;
+
+      viewer.camera.flyHome(0);
+
+      rebuildEntities();
+
+      const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+      handlerRef.current = handler;
+
+      handler.setInputAction((click: any) => {
+        const picked = viewer.scene.pick(click.position);
+        if (Cesium.defined(picked) && (picked as any).id) {
+          const maybeId = (picked as any).id;
+          let pickedStationId: string | undefined;
+
+          if (typeof maybeId === "string") {
+            pickedStationId = maybeId;
+          } else if (maybeId && typeof maybeId.id === "string") {
+            pickedStationId = maybeId.id;
+          }
+
+          if (pickedStationId) {
+            rotatingRef.current = false;
+            const station = validStations.find((s) => s.id === pickedStationId);
+            if (station) {
+              onSelectRef.current(station);
+            }
+          }
+        }
+      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+      viewer.scene.canvas.addEventListener("mousedown", () => {
+        rotatingRef.current = false;
+      });
+
+      viewer.clock.shouldAnimate = true;
+      viewer.clock.onTick.addEventListener(() => {
+        if (rotatingRef.current) {
+          viewer.camera.rotate(
+            Cesium.Cartesian3.UNIT_Z,
+            -0.00008
+          );
+        }
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+      handlerRef.current?.destroy();
+      if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+        viewerRef.current.destroy();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    rebuildEntities();
+  }, [validStations, selectedStationId]);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || !selectedStationId) return;
+
+    const station = validStations.find(
+      (s) => s.id === selectedStationId
     );
-  }, [stations]);
+    if (!station) return;
+
+    rotatingRef.current = false;
+
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(
+        station.geoLong,
+        station.geoLat,
+        250000
+      ),
+      duration: 2,
+      easingFunction: Cesium.EasingFunction.QUARTIC_IN_OUT,
+    });
+  }, [selectedStationId, validStations]);
+
+  const selectedStation = validStations.find(
+    (s) => s.id === selectedStationId
+  );
 
   return (
-    <div className="h-full w-full bg-neo-bg">
-      <MapContainer
-        center={[20, 0]}
-        zoom={2}
-        style={{ height: "100%", width:"100%" }}
-        maxBounds={[
-        [-90, -180],
-        [90, 180],
-        ]}
-        maxBoundsViscosity={1.0}
-      >
-        {selectedStationId && <MapController />}
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          noWrap={true}
-        />
+    <div className="globe-shell">
+      <div ref={containerRef} className="globe-map" />
 
-        <MarkerClusterGroup
-          chunkedLoading
-          maxClusterRadius={40}
-          removeOutsideVisibleBounds
-          spiderfyOnMaxZoom={false}
-          showCoverageOnHover={false}
-        >
-          {validStations.map((station) => (
-            <Marker
-              key={station.id}
-              position={[station.geoLat, station.geoLong]}
-              icon={getStationIcon(
-              station.favicon,
-              station.id === selectedStationId
-            )}
-            >
-              <Popup>
-                <div className="p-2">
-                  <h3 className="font-bold text-lg border-b-2 border-neo-dark mb-2 pb-1">
-                    {station.name}
-                  </h3>
+      <div className="globe-hint">
+        Drag to explore • Click a marker to play a station
+      </div>
 
-                  <p className="text-sm">
-                    <strong>Country:</strong>{' '}
-                    {station.country || 'Unknown'}
-                  </p>
+      {selectedStation && (
+        <div className="station-card">
+          <h3>{selectedStation.name}</h3>
 
-                  <p className="text-sm">
-                    <strong>Language:</strong>{' '}
-                    {station.language || 'Unknown'}
-                  </p>
+          <p>
+            <span>Country</span>
+            {selectedStation.country || "Unknown"}
+          </p>
 
-                  <button
-                    onClick={() => onSelectStation(station)}
-                    className="
-                      mt-3
-                      w-full
-                      bg-neo-blue
-                      border-2
-                      border-neo-dark
-                      py-1
-                      font-bold
-                      shadow-neo
-                      hover:shadow-neo-hover
-                      active:translate-y-1
-                      active:translate-x-1
-                    "
-                  >
-                    Play Station
-                  </button>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MarkerClusterGroup>
-      </MapContainer>
+          <p>
+            <span>Language</span>
+            {selectedStation.language || "Unknown"}
+          </p>
+
+          <button
+            onClick={() => onSelectStation(selectedStation)}
+          >
+            ▶ Play Station
+          </button>
+        </div>
+      )}
     </div>
   );
 };

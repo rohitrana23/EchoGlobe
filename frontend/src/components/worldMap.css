@@ -1,50 +1,108 @@
-.marker,
-.marker-selected {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: white;
-    border: 2px solid #1e1e1e;
-    box-shadow: 3px 3px 0 #1e1e1e;
-    position: relative;
+/* ── Globe shell ──────────────────────────────────────────────── */
+.globe-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #04040e;
 }
 
-/* Only clip the image on regular markers; selected needs overflow visible for the pulse ring */
-.marker {
-    overflow: hidden;
+/* CesiumJS canvas fills the entire container */
+.globe-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
-.marker img,
-.marker-selected img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
+/* Hide Cesium's default UI chrome we don't need */
+.cesium-widget-credits,
+.cesium-credit-logoContainer,
+.cesium-credit-textContainer {
+  display: none !important;
 }
 
-.marker-selected::after {
-    content: "";
-    position: absolute;
-    inset: -6px;
-    border-radius: 50%;
-    border: 3px solid #3b82f6;
-    animation: pulse 1.5s ease-out infinite;
-    pointer-events: none;
+/* ── Hint badge (top-left) ────────────────────────────────────── */
+.globe-hint {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 10;
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  background: rgba(6, 6, 24, 0.78);
+  color: #cbd5e1;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 6px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
 }
 
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-        opacity: 0.9;
-    }
+/* ── Station info card (bottom-right) ────────────────────────── */
+.station-card {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 10;
+  min-width: 16rem;
+  max-width: 20rem;
+  padding: 1rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  background: rgba(6, 8, 24, 0.88);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  animation: slideUp 0.22s ease;
+}
 
-    70% {
-        transform: scale(1.8);
-        opacity: 0;
-    }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
-    100% {
-        transform: scale(1.8);
-        opacity: 0;
-    }
+.station-card h3 {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1.3;
+}
+
+.station-card p {
+  margin: 0.28rem 0;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.station-card span {
+  font-weight: 600;
+  color: #60a5fa;
+}
+
+.station-card button {
+  margin-top: 0.85rem;
+  width: 100%;
+  border: none;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+  letter-spacing: 0.04em;
+}
+
+.station-card button:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
 }
