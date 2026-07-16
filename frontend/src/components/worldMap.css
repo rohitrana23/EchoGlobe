@@ -19,7 +19,6 @@
   display: none !important;
 }
 
-/* ── Hint badge (top-left) ────────────────────────────────────── */
 .globe-hint {
   position: absolute;
   top: 1rem;

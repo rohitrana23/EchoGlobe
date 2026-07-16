@@ -22,10 +22,9 @@ function App() {
       console.log('Stations fetch status:', res.status);
       setStations(res.data);
     } catch (error) {
-      // Provide detailed debug info for failed requests
-      // @ts-expect-error axios error typing
+      // @ts-expect-error
       const status = error?.response?.status;
-      // @ts-expect-error axios error typing
+      // @ts-expect-error
       const reqUrl = error?.config?.url;
       console.error('Error fetching stations', { status, reqUrl, error });
     }
