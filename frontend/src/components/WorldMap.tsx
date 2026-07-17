@@ -15,21 +15,17 @@ export interface Station {
   geoLat: number;
   geoLong: number;
 }
-
 interface WorldMapProps {
   stations: Station[];
   selectedStationId?: string;
   onSelectStation: (station: Station) => void;
 }
-
 function useLatest<T>(value: T) {
   const ref = useRef(value);
   ref.current = value;
   return ref;
 }
-
 const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmOThiMDY0ZS1lODVhLTQ0YzMtYThmNC0xMTJhZGU3YmM2MDAiLCJpZCI6NDU3MDI2LCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3ODQxODM4NzV9.lD_gnBuo91I0wbXxm_DhJXTWpe4ml3LBDp_BHfSkOdI";
-
 const WorldMap: React.FC<WorldMapProps> = ({
   stations,
   selectedStationId,
@@ -129,21 +125,15 @@ const WorldMap: React.FC<WorldMapProps> = ({
           pixelOffset: new Cesium.Cartesian2(0, -45),
         },
       });
-
       entitiesRef.current.push(entity);
     });
   };
-
   useEffect(() => {
     if (!containerRef.current || viewerRef.current) return;
-
     let cancelled = false;
-
-    (async () => {
+    (async()=>{
       Cesium.Ion.defaultAccessToken = TOKEN;
-
       const terrain = await Cesium.createWorldTerrainAsync();
-
       const viewer = new Cesium.Viewer(containerRef.current!, {
         terrainProvider: terrain,
         animation: false,
@@ -164,21 +154,17 @@ const WorldMap: React.FC<WorldMapProps> = ({
       }
 
       viewerRef.current = viewer;
-
       viewer.imageryLayers.removeAll();
 
       const provider = await Cesium.IonImageryProvider.fromAssetId(3830183);
       viewer.imageryLayers.addImageryProvider(provider);
-
       viewer.scene.globe.showGroundAtmosphere = true;
-
       viewer.camera.flyHome(0);
 
       rebuildEntities();
 
       const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
       handlerRef.current = handler;
-
       handler.setInputAction((click: any) => {
         const picked = viewer.scene.pick(click.position);
         const maybeId = (picked as any)?.id ?? (picked as any)?.entity?.id ?? (picked as any)?.primitive?.id;
@@ -251,9 +237,9 @@ const WorldMap: React.FC<WorldMapProps> = ({
     });
   }, [selectedStationId, validStations]);
 
-  const selectedStation = validStations.find(
-    (s) => s.id === selectedStationId
-  );
+  // const selectedStation = validStations.find(
+  //   (s) => s.id === selectedStationId
+  // );
 
   return (
     <div className="globe-shell">
