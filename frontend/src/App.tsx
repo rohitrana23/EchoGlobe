@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Navbar from './components/Navbar';
 import WorldMap, { type Station } from './components/WorldMap';
 import SearchSidebar from './components/SearchSidebar';
-import AudioPlayer from './components/AudioPlayer';
+import AudioPlayer, { type AudioPlayerHandle } from './components/AudioPlayer';
 
 function App() {
   const [stations, setStations] = useState<Station[]>([]);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const audioPlayerRef = useRef<AudioPlayerHandle | null>(null);
 
   const fetchStations = async (query = '') => {
     try {
@@ -60,6 +61,12 @@ function App() {
     const randomIndex=crypto.getRandomValues(new Uint32Array(1))[0] % pool.length;
     const randomStation=pool[randomIndex];
     setSelectedStation(randomStation);
+    audioPlayerRef.current?.playStation(randomStation);
+  };
+
+  const handleStationSelect = (station: Station) => {
+    setSelectedStation(station);
+    audioPlayerRef.current?.playStation(station);
   };
 
   return (
@@ -68,7 +75,7 @@ function App() {
         <WorldMap
     stations={stations}
     selectedStationId={selectedStation?.id}
-    onSelectStation={(station) => setSelectedStation(station)}
+    onSelectStation={handleStationSelect}
 />
       </div>
 
@@ -84,14 +91,14 @@ function App() {
           <SearchSidebar
             stations={stations}
             onSearch={fetchStations}
-            onSelectStation={(station) => setSelectedStation(station)}
+            onSelectStation={handleStationSelect}
             onClose={()=>setSidebarOpen(false)}
           />
         </div>
       )}
 
       {selectedStation && (
-        <AudioPlayer station={selectedStation} />
+        <AudioPlayer ref={audioPlayerRef} station={selectedStation} />
       )}
     </div>
   );

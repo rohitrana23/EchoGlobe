@@ -1,51 +1,61 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { Play, Pause, Volume2, VolumeX, Loader } from 'lucide-react';
 
 type Station = any;
 interface AudioPlayerProps {
   station: Station;
 }
-const AudioPlayer: React.FC<AudioPlayerProps>=({station}) => {
+
+export interface AudioPlayerHandle {
+  playStation: (nextStation: Station) => void;
+}
+
+const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({ station }, ref) => {
   const audioRef=useRef<HTMLAudioElement>(null);
   const [isPlaying,setIsPlaying]=useState(false);
   const [isLoading,setIsLoading]=useState(false);
   const [volume,setVolume]=useState(1);
   const [isMuted,setIsMuted]=useState(false);
   const [error,setError]=useState<string | null>(null);
-  useEffect(()=>{
-    if (audioRef.current) {
-      setIsLoading(true);
-      setError(null);
-      audioRef.current.src = station.urlResolved;
-      audioRef.current.play()
-        .then(() => {
-          setIsPlaying(true);
-          setIsLoading(false);
-        });
-        // .catch(err => {
-        //   // console.error("Audio playback failed", err);
-        //   setError("Note: weak connection");
-        //   setIsPlaying(false);
-        //   setIsLoading(false);
-        // });
+
+  const playStation = useCallback((nextStation: Station) => {
+    if (!audioRef.current || !nextStation?.urlResolved) {
+      return;
     }
-  }, [station]);
+
+    const audio = audioRef.current;
+    audio.pause();
+    audio.src = nextStation.urlResolved;
+    audio.load();
+    setIsLoading(true);
+    setError(null);
+
+    audio.play()
+      .then(() => {
+        setIsPlaying(true);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        // setError('Playback blocked. Click play to try again.');
+        setIsPlaying(false);
+        setIsLoading(false);
+      });
+  }, []);
+
+  useImperativeHandle(ref, () => ({ playStation }), [playStation]);
+
+  useEffect(() => {
+    if (station) {
+      playStation(station);
+    }
+  }, [station, playStation]);
   const togglePlay = () => {
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
         setIsPlaying(false);
       } else {
-        setIsLoading(true);
-        audioRef.current.play()
-          .then(() => {
-            setIsPlaying(true);
-            setIsLoading(false);
-          })
-          .catch(() => {
-            setError("Failed to play");
-            setIsLoading(false);
-          });
+        playStation(station);
       }
     }
   };
@@ -134,5 +144,7 @@ const AudioPlayer: React.FC<AudioPlayerProps>=({station}) => {
       <audio ref={audioRef} />
     </div>
   );
-};
+});
+
+AudioPlayer.displayName = 'AudioPlayer';
 export default AudioPlayer;

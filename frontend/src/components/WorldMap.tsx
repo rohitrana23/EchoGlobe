@@ -51,8 +51,9 @@ const WorldMap: React.FC<WorldMapProps> = ({
       ),
     [stations]
   );
+  const validStationsRef = useLatest(validStations);
 
-  const createPurplePin = () => {
+  const createPurplePin = (isActive: boolean) => {
     const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
   <defs>
@@ -60,6 +61,14 @@ const WorldMap: React.FC<WorldMapProps> = ({
       <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.25" />
     </filter>
   </defs>
+  ${
+    isActive
+      ? `<circle cx="48" cy="40" r="30" fill="none" stroke="#fbbf24" stroke-width="4" opacity="0.85">
+      <animate attributeName="r" values="24;34;24" dur="1.2s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0.75;0;0.75" dur="1.2s" repeatCount="indefinite" />
+    </circle>`
+      : ""
+  }
   <circle cx="48" cy="40" r="28" fill="#8b5cf6" filter="url(#shadow)" />
   <path d="M48 68 C48 68 30 54 30 40 A18 18 0 1 1 66 40 C66 54 48 68 48 68 Z" fill="#8b5cf6" />
   <circle cx="48" cy="40" r="20" fill="rgba(255,255,255,0.16)" />
@@ -68,7 +77,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   };
 
-  const getMarkerImage = () => createPurplePin();
+  const getMarkerImage = (isActive: boolean) => createPurplePin(isActive);
 
   const rebuildEntities = () => {
     const viewer = viewerRef.current;
@@ -88,9 +97,19 @@ const WorldMap: React.FC<WorldMapProps> = ({
           station.geoLat
         ),
         billboard: {
-          image: getMarkerImage(),
-          width: selected ? 54 : 42,
-          height: selected ? 54 : 42,
+          image: getMarkerImage(selected),
+          width: selected
+            ? new Cesium.CallbackProperty(() => {
+                const wave = 1 + Math.sin(Date.now() / 180) * 0.14;
+                return 54 * wave;
+              }, false)
+            : 42,
+          height: selected
+            ? new Cesium.CallbackProperty(() => {
+                const wave = 1 + Math.sin(Date.now() / 180) * 0.14;
+                return 54 * wave;
+              }, false)
+            : 42,
           verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
           scaleByDistance: new Cesium.NearFarScalar(
             500000,
@@ -162,22 +181,22 @@ const WorldMap: React.FC<WorldMapProps> = ({
 
       handler.setInputAction((click: any) => {
         const picked = viewer.scene.pick(click.position);
-        if (Cesium.defined(picked) && (picked as any).id) {
-          const maybeId = (picked as any).id;
-          let pickedStationId: string | undefined;
+        const maybeId = (picked as any)?.id ?? (picked as any)?.entity?.id ?? (picked as any)?.primitive?.id;
 
-          if (typeof maybeId === "string") {
-            pickedStationId = maybeId;
-          } else if (maybeId && typeof maybeId.id === "string") {
-            pickedStationId = maybeId.id;
-          }
+        let pickedStationId: string | undefined;
+        if (typeof maybeId === "string") {
+          pickedStationId = maybeId;
+        } else if (maybeId && typeof maybeId.id === "string") {
+          pickedStationId = maybeId.id;
+        }
 
-          if (pickedStationId) {
-            rotatingRef.current = false;
-            const station = validStations.find((s) => s.id === pickedStationId);
-            if (station) {
-              onSelectRef.current(station);
-            }
+        if (pickedStationId) {
+          rotatingRef.current = false;
+          const station = validStationsRef.current.find(
+            (s) => s.id === pickedStationId
+          );
+          if (station) {
+            onSelectRef.current(station);
           }
         }
       }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
@@ -244,7 +263,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
         Drag to explore • Click a marker to play a station
       </div>
 
-      {selectedStation && (
+      {/* {selectedStation && (
         <div className="station-card">
           <h3>{selectedStation.name}</h3>
 
@@ -264,7 +283,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
             ▶ Play Station
           </button>
         </div>
-      )}
+      )} */}
     </div>
   );
 };
