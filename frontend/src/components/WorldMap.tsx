@@ -147,7 +147,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
         infoBox: false,
         selectionIndicator: false,
       });
-      viewer.resolutionScale = window.devicePixelRatio || 1;
+      viewer.resolutionScale = 0.70;
       if (cancelled) {
         viewer.destroy();
         return;
