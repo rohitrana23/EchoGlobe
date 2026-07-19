@@ -25,6 +25,15 @@ function useLatest<T>(value: T) {
   ref.current = value;
   return ref;
 }
+
+const isMobilePerformanceMode = () => {
+  if (typeof window === "undefined") return false;
+
+  const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+  const touchDevice = navigator.maxTouchPoints > 0;
+  return (coarsePointer || touchDevice) && window.innerWidth <= 900;
+};
+
 const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmOThiMDY0ZS1lODVhLTQ0YzMtYThmNC0xMTJhZGU3YmM2MDAiLCJpZCI6NDU3MDI2LCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3ODQxODM4NzV9.lD_gnBuo91I0wbXxm_DhJXTWpe4ml3LBDp_BHfSkOdI";
 const WorldMap: React.FC<WorldMapProps> = ({
   stations,
@@ -56,13 +65,37 @@ const WorldMap: React.FC<WorldMapProps> = ({
     <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
       <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.25" />
     </filter>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
   ${
     isActive
-      ? `<circle cx="48" cy="40" r="30" fill="none" stroke="#fbbf24" stroke-width="4" opacity="0.85">
-      <animate attributeName="r" values="24;34;24" dur="1.2s" repeatCount="indefinite" />
-      <animate attributeName="opacity" values="0.75;0;0.75" dur="1.2s" repeatCount="indefinite" />
-    </circle>`
+      ? `
+    <g opacity="0.8">
+      <circle cx="48" cy="40" r="12" fill="none" stroke="#fbbf24" stroke-width="3">
+        <animate attributeName="r" values="4;80" dur="1.4s" repeatCount="indefinite" />
+        <animate attributeName="stroke-opacity" values="1;0" dur="1.4s" repeatCount="indefinite" />
+      </circle>
+    </g>
+    <g opacity="0.6">
+      <circle cx="48" cy="40" r="12" fill="none" stroke="#fbbf24" stroke-width="3">
+        <animate attributeName="r" values="4;80" dur="1.4s" repeatCount="indefinite" begin="0.35s" />
+        <animate attributeName="stroke-opacity" values="1;0" dur="1.4s" repeatCount="indefinite" begin="0.35s" />
+      </circle>
+    </g>
+    <g opacity="0.4">
+      <circle cx="48" cy="40" r="12" fill="none" stroke="#fbbf24" stroke-width="3">
+        <animate attributeName="r" values="4;80" dur="1.4s" repeatCount="indefinite" begin="0.7s" />
+        <animate attributeName="stroke-opacity" values="1;0" dur="1.4s" repeatCount="indefinite" begin="0.7s" />
+      </circle>
+    </g>
+    <circle cx="48" cy="40" r="28" fill="#fbbf24" opacity="0.25" filter="url(#glow)" />
+    `
       : ""
   }
   <circle cx="48" cy="40" r="28" fill="#8b5cf6" filter="url(#shadow)" />
@@ -94,18 +127,8 @@ const WorldMap: React.FC<WorldMapProps> = ({
         ),
         billboard: {
           image: getMarkerImage(selected),
-          width: selected
-            ? new Cesium.CallbackProperty(() => {
-                const wave = 1 + Math.sin(Date.now() / 180) * 0.14;
-                return 54 * wave;
-              }, false)
-            : 42,
-          height: selected
-            ? new Cesium.CallbackProperty(() => {
-                const wave = 1 + Math.sin(Date.now() / 180) * 0.14;
-                return 54 * wave;
-              }, false)
-            : 42,
+          width: 42,
+          height: 42,
           verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
           scaleByDistance: new Cesium.NearFarScalar(
             500000,
@@ -133,7 +156,10 @@ const WorldMap: React.FC<WorldMapProps> = ({
     let cancelled = false;
     (async()=>{
       Cesium.Ion.defaultAccessToken = TOKEN;
-      const terrain = await Cesium.createWorldTerrainAsync();
+      const terrain = await Cesium.createWorldTerrainAsync({
+        requestVertexNormals: false,
+        requestWaterMask: false,
+      });
       const viewer = new Cesium.Viewer(containerRef.current!, {
         terrainProvider: terrain,
         animation: false,
@@ -147,7 +173,19 @@ const WorldMap: React.FC<WorldMapProps> = ({
         infoBox: false,
         selectionIndicator: false,
       });
-      viewer.resolutionScale = 0.70;
+      const mobilePerformanceMode = isMobilePerformanceMode();
+      viewer.resolutionScale = mobilePerformanceMode ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+      viewer.scene.requestRenderMode = mobilePerformanceMode;
+      (viewer.scene as Cesium.Scene & { maximumFrameRate?: number }).maximumFrameRate = mobilePerformanceMode ? 30 : 60;
+      viewer.scene.fog.enabled = !mobilePerformanceMode;
+      viewer.scene.globe.showGroundAtmosphere = !mobilePerformanceMode;
+      viewer.scene.globe.enableLighting = false;
+      viewer.scene.globe.tileCacheSize = mobilePerformanceMode ? 48 : 96;
+      viewer.scene.globe.maximumScreenSpaceError = mobilePerformanceMode ? 4 : 2;
+      viewer.scene.globe.preloadSiblings = !mobilePerformanceMode;
+      viewer.scene.globe.depthTestAgainstTerrain = false;
+      viewer.shadows = false;
+
       if (cancelled) {
         viewer.destroy();
         return;
@@ -192,11 +230,12 @@ const WorldMap: React.FC<WorldMapProps> = ({
       });
 
       viewer.clock.shouldAnimate = true;
+      const rotationSpeed = mobilePerformanceMode ? -0.00003 : -0.00008;
       viewer.clock.onTick.addEventListener(() => {
         if (rotatingRef.current) {
           viewer.camera.rotate(
             Cesium.Cartesian3.UNIT_Z,
-            -0.00008
+            rotationSpeed
           );
         }
       });
