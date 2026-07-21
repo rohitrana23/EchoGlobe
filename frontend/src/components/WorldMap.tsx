@@ -34,33 +34,8 @@ const isMobilePerformanceMode = () => {
   return (coarsePointer || touchDevice) && window.innerWidth <= 900;
 };
 
-const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmOThiMDY0ZS1lODVhLTQ0YzMtYThmNC0xMTJhZGU3YmM2MDAiLCJpZCI6NDU3MDI2LCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3ODQxODM4NzV9.lD_gnBuo91I0wbXxm_DhJXTWpe4ml3LBDp_BHfSkOdI";
-const WorldMap: React.FC<WorldMapProps> = ({
-  stations,
-  selectedStationId,
-  onSelectStation,
-}) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const viewerRef = useRef<Cesium.Viewer | null>(null);
-  const [viewerReady, setViewerReady] = useState(false);
-  const entitiesRef = useRef<Cesium.Entity[]>([]);
-  const rotatingRef = useRef(true);
-  const handlerRef = useRef<Cesium.ScreenSpaceEventHandler | null>(null);
-  const onSelectRef = useLatest(onSelectStation);
-
-  const validStations = useMemo(
-    () =>
-      stations.filter(
-        (s) =>
-          Number.isFinite(s.geoLat) &&
-          Number.isFinite(s.geoLong)
-      ),
-    [stations]
-  );
-  const validStationsRef = useLatest(validStations);
-
-  const createPurplePin = (isActive: boolean) => {
-    const svg = `
+const createPurplePin = (isActive: boolean) => {
+  const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
   <defs>
     <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
@@ -104,65 +79,102 @@ const WorldMap: React.FC<WorldMapProps> = ({
   <circle cx="48" cy="40" r="20" fill="rgba(255,255,255,0.16)" />
 </svg>
     `;
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+};
+
+const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmOThiMDY0ZS1lODVhLTQ0YzMtYThmNC0xMTJhZGU3YmM2MDAiLCJpZCI6NDU3MDI2LCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3ODQxODM4NzV9.lD_gnBuo91I0wbXxm_DhJXTWpe4ml3LBDp_BHfSkOdI";
+const WorldMap: React.FC<WorldMapProps> = ({
+  stations,
+  selectedStationId,
+  onSelectStation,
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<Cesium.Viewer | null>(null);
+  const [viewerReady, setViewerReady] = useState(false);
+  const entityMapRef = useRef(new Map<string, Cesium.Entity>());
+  const stationMapRef = useRef(new Map<string, Station>());
+  const previousSelectedRef = useRef<string | undefined>(undefined);
+  const rotatingRef = useRef(true);
+  const handlerRef = useRef<Cesium.ScreenSpaceEventHandler | null>(null);
+  const onSelectRef = useLatest(onSelectStation);
+
+  const validStations = useMemo(
+    () =>
+      stations.filter(
+        (s) => Number.isFinite(s.geoLat) && Number.isFinite(s.geoLong)
+      ),
+    [stations]
+  );
+  const activeMarkerImage = useMemo(() => createPurplePin(true), []);
+  const inactiveMarkerImage = useMemo(() => createPurplePin(false), []);
+  const sharedScaleByDistance = useMemo(
+    () => new Cesium.NearFarScalar(500000, 1.3, 25000000, 0.45),
+    []
+  );
+  const sharedPixelOffset = useMemo(() => new Cesium.Cartesian2(0, -45), []);
+
+  const applySelectionState = (entity: Cesium.Entity | undefined, isSelected: boolean) => {
+    if (!entity) return;
+
+    if (entity.billboard) {
+      entity.billboard.image = new Cesium.ConstantProperty(
+        isSelected ? activeMarkerImage : inactiveMarkerImage
+      );
+    }
+
+    if (entity.label) {
+      entity.label.show = new Cesium.ConstantProperty(isSelected);
+    }
   };
 
-  const getMarkerImage = (isActive: boolean) => createPurplePin(isActive);
-
-  const rebuildEntities = () => {
-    const viewer = viewerRef.current;
-    if (!viewer) return;
-
-    entitiesRef.current.forEach((entity) => viewer.entities.remove(entity));
-    entitiesRef.current = [];
-
-    validStationsRef.current.forEach((station) => {
-      const selected = station.id === selectedStationId;
-
-      const entity = viewer.entities.add({
-        id: station.id,
-        name: station.name,
-        position: Cesium.Cartesian3.fromDegrees(
-          station.geoLong,
-          station.geoLat
-        ),
-        billboard: {
-          image: getMarkerImage(selected),
-          width: 42,
-          height: 42,
-          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-          scaleByDistance: new Cesium.NearFarScalar(
-            500000,
-            1.3,
-            25000000,
-            0.45
-          ),
-        },
-        label: {
-          text: station.name,
-          show: selected,
-          font: "15px sans-serif",
-          fillColor: Cesium.Color.WHITE,
-          outlineColor: Cesium.Color.BLACK,
-          outlineWidth: 3,
-          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-          pixelOffset: new Cesium.Cartesian2(0, -45),
-        },
-      });
-      entitiesRef.current.push(entity);
+  const addStationEntity = (viewer: Cesium.Viewer, station: Station) => {
+    const entity = viewer.entities.add({
+      id: station.id,
+      name: station.name,
+      position: Cesium.Cartesian3.fromDegrees(station.geoLong, station.geoLat),
+      billboard: {
+        image: new Cesium.ConstantProperty(station.id === selectedStationId ? activeMarkerImage : inactiveMarkerImage),
+        width: 42,
+        height: 42,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        scaleByDistance: sharedScaleByDistance,
+      },
+      label: {
+        text: station.name,
+        show: new Cesium.ConstantProperty(station.id === selectedStationId),
+        font: "15px sans-serif",
+        fillColor: Cesium.Color.WHITE,
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 3,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        pixelOffset: sharedPixelOffset,
+      },
     });
+
+    entityMapRef.current.set(station.id, entity);
   };
+
+  useEffect(() => {
+    const nextMap = new Map<string, Station>();
+    validStations.forEach((station) => {
+      nextMap.set(station.id, station);
+    });
+    stationMapRef.current = nextMap;
+  }, [validStations]);
+
   useEffect(() => {
     if (!containerRef.current || viewerRef.current) return;
     let cancelled = false;
-    (async()=>{
+
+    (async () => {
       Cesium.Ion.defaultAccessToken = TOKEN;
-      const terrain = await Cesium.createWorldTerrainAsync({
+      await Cesium.createWorldTerrainAsync({
         requestVertexNormals: false,
         requestWaterMask: false,
       });
+
       const viewer = new Cesium.Viewer(containerRef.current!, {
-        terrainProvider: terrain,
+        terrainProvider: undefined,
         animation: false,
         timeline: false,
         baseLayerPicker: false,
@@ -174,6 +186,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
         infoBox: false,
         selectionIndicator: false,
       });
+
       const mobilePerformanceMode = isMobilePerformanceMode();
       viewer.resolutionScale = mobilePerformanceMode ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
       viewer.scene.requestRenderMode = mobilePerformanceMode;
@@ -186,7 +199,19 @@ const WorldMap: React.FC<WorldMapProps> = ({
       viewer.scene.globe.preloadSiblings = !mobilePerformanceMode;
       viewer.scene.globe.depthTestAgainstTerrain = false;
       viewer.shadows = false;
-
+      if (viewer.scene.skyBox) {
+        viewer.scene.skyBox.show = false;
+      }
+      if (viewer.scene.skyAtmosphere) {
+        viewer.scene.skyAtmosphere.show = false;
+      }
+      if (viewer.scene.sun) {
+        viewer.scene.sun.show = false;
+      }
+      if (viewer.scene.moon) {
+        viewer.scene.moon.show = false;
+      }
+      viewer.scene.backgroundColor = Cesium.Color.BLACK;
       if (cancelled) {
         viewer.destroy();
         return;
@@ -195,9 +220,12 @@ const WorldMap: React.FC<WorldMapProps> = ({
       viewerRef.current = viewer;
       viewer.imageryLayers.removeAll();
 
-      const provider = await Cesium.IonImageryProvider.fromAssetId(3830183);
+      const provider = new Cesium.UrlTemplateImageryProvider({
+        url: "https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=WSEAh2ruJOWbRedBniKr",
+      });
+
       viewer.imageryLayers.addImageryProvider(provider);
-      viewer.scene.globe.showGroundAtmosphere = true;
+      viewer.scene.globe.showGroundAtmosphere = false;
       viewer.camera.flyHome(0);
       requestAnimationFrame(() => {
         viewer.resize();
@@ -219,9 +247,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
 
         if (pickedStationId) {
           rotatingRef.current = false;
-          const station = validStationsRef.current.find(
-            (s) => s.id === pickedStationId
-          );
+          const station = stationMapRef.current.get(pickedStationId);
           if (station) {
             onSelectRef.current(station);
           }
@@ -231,17 +257,15 @@ const WorldMap: React.FC<WorldMapProps> = ({
       viewer.scene.canvas.addEventListener("mousedown", () => {
         rotatingRef.current = false;
       });
-
-      viewer.clock.shouldAnimate = true;
-      const rotationSpeed = mobilePerformanceMode ? -0.00003 : -0.00008;
-      viewer.clock.onTick.addEventListener(() => {
-        if (rotatingRef.current) {
-          viewer.camera.rotate(
-            Cesium.Cartesian3.UNIT_Z,
-            rotationSpeed
-          );
-        }
-      });
+      
+      //ROTATION LOGIC
+      // viewer.clock.shouldAnimate = true;
+      // const rotationSpeed = mobilePerformanceMode ? -0.00003 : -0.00008;
+      // viewer.clock.onTick.addEventListener(() => {
+      //   if (rotatingRef.current) {
+      //     viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, rotationSpeed);
+      //   }
+      // });
     })();
 
     return () => {
@@ -254,35 +278,65 @@ const WorldMap: React.FC<WorldMapProps> = ({
   }, []);
 
   useEffect(() => {
+    if (!viewerReady || !viewerRef.current) return;
+
+    const viewer = viewerRef.current;
+    const nextStationIds = new Set(validStations.map((station) => station.id));
+    const currentIds = Array.from(entityMapRef.current.keys());
+
+    currentIds.forEach((id) => {
+      if (!nextStationIds.has(id)) {
+        const entity = entityMapRef.current.get(id);
+        if (entity) {
+          viewer.entities.remove(entity);
+          entityMapRef.current.delete(id);
+        }
+      }
+    });
+
+    if (entityMapRef.current.size === 0) {
+      validStations.forEach((station) => addStationEntity(viewer, station));
+    } else {
+      validStations.forEach((station) => {
+        if (!entityMapRef.current.has(station.id)) {
+          addStationEntity(viewer, station);
+        }
+      });
+    }
+  }, [viewerReady, validStations]);
+
+  useEffect(() => {
     if (!viewerReady) return;
-    rebuildEntities();
-  }, [viewerReady, validStations, selectedStationId]);
+
+    const previousId = previousSelectedRef.current;
+    if (previousId && previousId !== selectedStationId) {
+      const previousEntity = entityMapRef.current.get(previousId);
+      applySelectionState(previousEntity, false);
+    }
+
+    const currentEntity = selectedStationId
+      ? entityMapRef.current.get(selectedStationId)
+      : undefined;
+    applySelectionState(currentEntity, Boolean(selectedStationId));
+
+    previousSelectedRef.current = selectedStationId;
+  }, [viewerReady, selectedStationId]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || !selectedStationId) return;
 
-    const station = validStations.find(
-      (s) => s.id === selectedStationId
-    );
+    const station = stationMapRef.current.get(selectedStationId);
     if (!station) return;
 
     rotatingRef.current = false;
 
     viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(
-        station.geoLong,
-        station.geoLat,
-        250000
-      ),
+      destination: Cesium.Cartesian3.fromDegrees(station.geoLong, station.geoLat, 250000),
       duration: 2,
       easingFunction: Cesium.EasingFunction.QUARTIC_IN_OUT,
     });
-  }, [selectedStationId, validStations]);
-
-  // const selectedStation = validStations.find(
-  //   (s) => s.id === selectedStationId
-  // );
+  }, [selectedStationId]);
 
   return (
     <div className="globe-shell">
@@ -291,28 +345,6 @@ const WorldMap: React.FC<WorldMapProps> = ({
       <div className="globe-hint">
         Drag to explore • Click a marker to play a station
       </div>
-
-      {/* {selectedStation && (
-        <div className="station-card">
-          <h3>{selectedStation.name}</h3>
-
-          <p>
-            <span>Country</span>
-            {selectedStation.country || "Unknown"}
-          </p>
-
-          <p>
-            <span>Language</span>
-            {selectedStation.language || "Unknown"}
-          </p>
-
-          <button
-            onClick={() => onSelectStation(selectedStation)}
-          >
-            ▶ Play Station
-          </button>
-        </div>
-      )} */}
     </div>
   );
 };
