@@ -70,13 +70,14 @@ function App() {
   };
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden">
+    <div className="relative h-screen w-screen overflow-hidden bg-slate-950/95">
       <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.95),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.18),transparent_45%)]" />
         <WorldMap
-    stations={stations}
-    selectedStationId={selectedStation?.id}
-    onSelectStation={handleStationSelect}
-/>
+          stations={stations}
+          selectedStationId={selectedStation?.id}
+          onSelectStation={handleStationSelect}
+        />
       </div>
 
       <div className="absolute top-0 left-0 right-0 z-50 pointer-events-none">

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import "./worldMap.css";
@@ -42,6 +42,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
+  const [viewerReady, setViewerReady] = useState(false);
   const entitiesRef = useRef<Cesium.Entity[]>([]);
   const rotatingRef = useRef(true);
   const handlerRef = useRef<Cesium.ScreenSpaceEventHandler | null>(null);
@@ -115,7 +116,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
     entitiesRef.current.forEach((entity) => viewer.entities.remove(entity));
     entitiesRef.current = [];
 
-    validStations.forEach((station) => {
+    validStationsRef.current.forEach((station) => {
       const selected = station.id === selectedStationId;
 
       const entity = viewer.entities.add({
@@ -198,8 +199,10 @@ const WorldMap: React.FC<WorldMapProps> = ({
       viewer.imageryLayers.addImageryProvider(provider);
       viewer.scene.globe.showGroundAtmosphere = true;
       viewer.camera.flyHome(0);
-
-      rebuildEntities();
+      requestAnimationFrame(() => {
+        viewer.resize();
+      });
+      setViewerReady(true);
 
       const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
       handlerRef.current = handler;
@@ -251,8 +254,9 @@ const WorldMap: React.FC<WorldMapProps> = ({
   }, []);
 
   useEffect(() => {
+    if (!viewerReady) return;
     rebuildEntities();
-  }, [validStations, selectedStationId]);
+  }, [viewerReady, validStations, selectedStationId]);
 
   useEffect(() => {
     const viewer = viewerRef.current;

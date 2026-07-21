@@ -6,10 +6,30 @@ html,
 body,
 #root {
   height: 100%;
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   @apply bg-neo-bg text-neo-dark font-sans;
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.16), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.12), transparent 34%),
+    linear-gradient(135deg, #f8fbff 0%, #eef4ff 48%, #f7f8fc 100%);
+  color: #1f2937;
+  font-family: Inter, 'Segoe UI', Roboto, system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.24);
+  color: #0f172a;
 }
 :root {
   --text: #6b6375;
