@@ -20,15 +20,31 @@ const SearchSidebar: React.FC<SearchSidebarProps> = ({
 }) => {
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
+  const [developerRecsOnly, setDeveloperRecsOnly] = useState(false);
 
   const ITEMS_PER_PAGE = 10;
 
+  const isDeveloperRec = (station: Station) => {
+    const haystack = `${station.name || ''} ${station.tags || ''} ${station.language || ''}`.toLowerCase();
+    const keywords = [
+      "america's country",
+      "japan hits",
+      "country music",
+    ];
+
+    return keywords.some((keyword) => haystack.includes(keyword));
+  };
+
+  const filteredStations = developerRecsOnly
+    ? stations.filter(isDeveloperRec)
+    : stations;
+
   const totalPages = Math.max(
     1,
-    Math.ceil(stations.length / ITEMS_PER_PAGE)
+    Math.ceil(filteredStations.length / ITEMS_PER_PAGE)
   );
 
-  const visibleStations = stations.slice(
+  const visibleStations = filteredStations.slice(
     (page - 1) * ITEMS_PER_PAGE,
     page * ITEMS_PER_PAGE
   );
@@ -84,30 +100,46 @@ const SearchSidebar: React.FC<SearchSidebarProps> = ({
             <Search className="w-4 h-4" strokeWidth={2.5} />
           </button>
         </form>
+
+        <button
+          type="button"
+          onClick={() => {
+            setDeveloperRecsOnly((value) => !value);
+            setPage(1);
+          }}
+          className={`mt-2 inline-flex items-center rounded-lg border-[2px] border-black px-2.5 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-100 ${
+            developerRecsOnly
+              ? 'bg-[#FFD84D] text-black shadow-[2px_2px_0px_0px_#000]'
+              : 'bg-white text-black/70 shadow-[2px_2px_0px_0px_#000]'
+          }`}
+        >
+          <Radio className="mr-1.5 h-3 w-3" strokeWidth={2.2} />
+          Developer&apos;s Recs
+        </button>
       </div>
 
       {/* Results count */}
-      {stations.length > 0 && (
+      {filteredStations.length > 0 && (
         <div className="border-b-[2px] border-black/10 bg-black/[0.03] px-4 py-2">
           <span className="text-[11px] font-black uppercase tracking-[0.24em] text-black/60">
-            {stations.length} result{stations.length !== 1 ? 's' : ''}
+            {filteredStations.length} result{filteredStations.length !== 1 ? 's' : ''}
           </span>
         </div>
       )}
 
       {/* Station list */}
       <div className="flex-1 overflow-y-auto">
-        {stations.length === 0 ? (
+        {filteredStations.length === 0 ? (
           <div className="m-3 rounded-xl border-[2px] border-dashed border-black/30 bg-white p-4 text-center">
             <Radio
               className="w-8 h-8 mx-auto mb-2 opacity-25"
               strokeWidth={1.5}
             />
             <p className="text-sm font-black text-black/40">
-              No stations found
+              {developerRecsOnly ? 'No developer recs found' : 'No stations found'}
             </p>
             <p className="mt-0.5 text-xs text-black/30">
-              Try a different search
+              {developerRecsOnly ? 'Try turning the filter off' : 'Try a different search'}
             </p>
           </div>
         ) : (
