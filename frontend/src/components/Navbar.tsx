@@ -38,7 +38,7 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, onRandomStation }) => {
           <div className="flex items-center gap-2">
             <div className="hidden items-center gap-1.5 rounded-lg border-[2px] border-black bg-white/80 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-black sm:flex">
               <Globe className="h-3 w-3" strokeWidth={2} />
-              <span>1k+ stations</span>
+              <span>1.5k+ stations</span>
             </div>
 
             <button

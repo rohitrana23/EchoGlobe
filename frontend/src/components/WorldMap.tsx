@@ -74,8 +74,8 @@ const createPurplePin = (isActive: boolean) => {
     `
       : ""
   }
-  <circle cx="48" cy="40" r="28" fill="#8b5cf6" filter="url(#shadow)" />
-  <path d="M48 68 C48 68 30 54 30 40 A18 18 0 1 1 66 40 C66 54 48 68 48 68 Z" fill="#8b5cf6" />
+  <circle cx="48" cy="40" r="28" fill="#00a19c" filter="url(#shadow)" />
+  <path d="M48 68 C48 68 30 54 30 40 A18 18 0 1 1 66 40 C66 54 48 68 48 68 Z" fill="#00a19c" />
   <circle cx="48" cy="40" r="20" fill="rgba(255,255,255,0.16)" />
 </svg>
     `;
